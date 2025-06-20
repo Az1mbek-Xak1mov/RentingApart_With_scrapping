@@ -15,4 +15,3 @@ from bot.dispatcher import dp
 async def echo_handler(message: Message) -> None:
     await message.answer("Hello")
 
-
