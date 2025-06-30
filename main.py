@@ -1,6 +1,5 @@
 from bot.handler import *
 
-TOKEN=Env().bot.TOKEN
 
 async def main() -> None:
     bot = Bot(token=TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))

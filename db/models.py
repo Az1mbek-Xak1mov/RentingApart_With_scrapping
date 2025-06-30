@@ -25,6 +25,7 @@ class ApartmentImage(Base):
 
 class Apartment(Base):
     __tablename__ = "apartments"
+
     id: Mapped[int] = mapped_column(BIGINT, primary_key=True, autoincrement=True)
     owner_name: Mapped[str] = mapped_column(String(100), nullable=True)
     title: Mapped[str] = mapped_column(String(200), nullable=False)
@@ -39,13 +40,18 @@ class Apartment(Base):
     phone_number: Mapped[str] = mapped_column(String(50), nullable=True)
     building_type: Mapped[str] = mapped_column(String(50), nullable=True)
     repair: Mapped[str] = mapped_column(String(50), nullable=True)
+    map_link: Mapped[str] = mapped_column(String(500), nullable=True)
+    latitude: Mapped[Decimal] = mapped_column(DECIMAL(9, 6), nullable=True)
+    longitude: Mapped[Decimal] = mapped_column(DECIMAL(9, 6), nullable=True)
+    scraped_at: Mapped[str] = mapped_column(TIMESTAMP, server_default=func.now())
+    status: Mapped[str] = mapped_column(String(50), nullable=True)
+
     images_list = relationship(
         "ApartmentImage",
         back_populates="apartment",
         cascade="all, delete-orphan",
     )
-    scraped_at: Mapped[str] = mapped_column(TIMESTAMP, server_default=func.now())
-    status: Mapped[str] = mapped_column(String(50), nullable=True)
+
     def __repr__(self):
         return (
             f"<Apartment(id={self.id}, title={self.title!r}, price={self.price}, "
@@ -53,3 +59,10 @@ class Apartment(Base):
         )
 
 
+
+#This model not added yet.If I figure out caption problem in getting number,I will add this model too
+class ApartmentUrl(Base):
+    __tablename__ = "apartmenturls"
+
+    id: Mapped[int] = mapped_column(BIGINT, primary_key=True, autoincrement=True)
+    url: Mapped[str] = mapped_column(String(255), nullable=False)
