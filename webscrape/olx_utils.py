@@ -1,5 +1,6 @@
 import os
 import uuid
+from urllib.parse import urlparse
 import requests
 from pathlib import Path
 
@@ -125,26 +126,16 @@ def parse_parameters(params: dict) -> dict:
     return result
 
 
-BASE_IMG_DIR = Path(os.getenv("APARTMENT_IMG_DIR", "images"))
+MAX_IMAGES_PER_APARTMENT = 10
 
-try:
-    BASE_IMG_DIR.mkdir(parents=True, exist_ok=True)
-except Exception as e:
-    print(f"Warning: could not create base image directory {BASE_IMG_DIR}: {e}")
+BASE_IMG_DIR = (
+    Path(__file__).resolve()
+    .parent.parent
+    / "webscrape"
+    / "images"
+)
 
 def save_image_for_apartment(apartment_id: int, image_url: str) -> str | None:
-    """
-    Download image_url and save it under BASE_IMG_DIR/{apartment_id}/{uuid}.{ext}.
-    Returns the relative path (from BASE_IMG_DIR) as string, e.g. "123/abcd-uuid.jpg", or None on failure.
-    """
-    # Parse extension from URL path
-    from urllib.parse import urlparse
-    parsed = urlparse(image_url)
-    _, ext = os.path.splitext(parsed.path)
-    ext = ext.lower()
-    if ext not in {".jpg", ".jpeg", ".png", ".gif", ".webp"}:
-        ext = ".jpg"
-    filename = f"{uuid.uuid4()}{ext}"
     dirpath = BASE_IMG_DIR / str(apartment_id)
     try:
         dirpath.mkdir(parents=True, exist_ok=True)
@@ -152,14 +143,26 @@ def save_image_for_apartment(apartment_id: int, image_url: str) -> str | None:
         print(f"Failed to create image directory {dirpath}: {e}")
         return None
 
+    # enforce max images per apartment
+    existing = list(dirpath.iterdir())
+    if len(existing) >= MAX_IMAGES_PER_APARTMENT:
+        # already at (or above) limit
+        return None
+
+    # parse extension
+    parsed = urlparse(image_url)
+    ext = Path(parsed.path).suffix.lower()
+    if ext not in {".jpg", ".jpeg", ".png", ".gif", ".webp"}:
+        ext = ".jpg"
+
+    filename = f"{uuid.uuid4()}{ext}"
     full_path = dirpath / filename
+
     try:
         resp = requests.get(image_url, timeout=10)
         resp.raise_for_status()
-        with open(full_path, "wb") as f:
-            f.write(resp.content)
-        # Return relative path string
-        return str(Path(str(apartment_id)) / filename)
+        full_path.write_bytes(resp.content)
+        return f"{apartment_id}/{filename}"
     except Exception as e:
         print(f"Failed to download image {image_url}: {e}")
         return None

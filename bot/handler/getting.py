@@ -75,7 +75,7 @@ async def name_handler(callback: CallbackQuery, state: FSMContext):
     await state.update_data({"rooms":rooms})
     await state.set_state(SearchState.start_price)
     await callback.message.edit_text(
-        text="💰 Kvartiraning boshlang'ich narxi:",
+        text="Kvartiraning boshlang'ich narxi $:",
         reply_markup=None
     )
     await callback.answer()
@@ -86,7 +86,7 @@ async def name_handler(message: Message, state: FSMContext):
     await state.update_data({"start_price":start_price})
     await state.set_state(SearchState.end_price)
     await message.answer(
-        text="💵 Kvartiraning oxirgi narxi:",
+        text="Kvartiraning oxirgi narxi $:",
         reply_markup=None
     )
 
@@ -122,6 +122,7 @@ async def price_handler(message: Message, state: FSMContext):
 
         for apt in apartments:
             text = (
+                f"🔑(№ {apt.id})🔑"
                 f"📍 Tuman: {apt.district}\n"
                 f"🛏️ Xona: {apt.rooms}\n"
                 f"🏢 Turi: {apt.building_type or '-'}\n"
@@ -176,9 +177,17 @@ async def price_handler(message: Message, state: FSMContext):
 
     # back button
     builder = InlineKeyboardBuilder()
-    builder.add(InlineKeyboardButton(text="🔙Orqaga", callback_data="Ijarachi"))
+    builder.add(InlineKeyboardButton(text="🔙Orqaga", callback_data="/start"))
     builder.adjust(1)
 
     await message.answer("⬅️ Asosiy panelga qaytish", reply_markup=builder.as_markup())
-    await state.set_state(StepByStepStates.start)
+    await state.clear()
 
+@dp.callback_query(F.data=="/start")
+async def command_start_handler(call: CallbackQuery, state: FSMContext) -> None:
+    btns = ["Getting All Apartment", "Getting Apartment"]
+    sizes = [2]
+    markup = make_reply_btn(btns, sizes)
+    await state.set_state(StepByStepStates.start)
+    await call.message.answer("Hush kelibsiz!", reply_markup=ReplyKeyboardRemove())
+    await call.message.answer("Faqat tugmalardan foydalaning", reply_markup=markup)

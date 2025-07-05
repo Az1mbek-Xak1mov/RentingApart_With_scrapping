@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy import BIGINT, String, Text, Integer, DECIMAL, Boolean, TIMESTAMP, ForeignKey
+from sqlalchemy import BIGINT, String, Text, Integer, DECIMAL, Boolean, TIMESTAMP, ForeignKey, Enum
 from sqlalchemy.sql import func
 from db.engine import Base
 from decimal import Decimal
@@ -45,6 +45,16 @@ class Apartment(Base):
     longitude: Mapped[Decimal] = mapped_column(DECIMAL(9, 6), nullable=True)
     scraped_at: Mapped[str] = mapped_column(TIMESTAMP, server_default=func.now())
     status: Mapped[str] = mapped_column(String(50), nullable=True)
+    url_id: Mapped[int] = mapped_column(
+        ForeignKey("apartmenturls.id"),
+        nullable=False,
+        unique=True
+    )
+    url: Mapped["ApartmentUrl"] = relationship(
+        "ApartmentUrl",
+        back_populates="apartment",
+        uselist=False
+    )
 
     images_list = relationship(
         "ApartmentImage",
@@ -60,9 +70,34 @@ class Apartment(Base):
 
 
 
-#This model not added yet.If I figure out caption problem in getting number,I will add this model too
+url_status = Enum(
+    "new",        # never scraped
+    "in_progress",# currently being scraped
+    "done",       # scraped successfully
+    "error",      # scraped but failed
+    name="url_status",
+)
+
 class ApartmentUrl(Base):
     __tablename__ = "apartmenturls"
 
     id: Mapped[int] = mapped_column(BIGINT, primary_key=True, autoincrement=True)
-    url: Mapped[str] = mapped_column(String(255), nullable=False)
+    url: Mapped[str] = mapped_column(String(255), nullable=False, unique=True)
+    status: Mapped[str] = mapped_column(
+        url_status,
+        default="new",
+        nullable=False,
+    )
+    apartment: Mapped[Apartment] = relationship(
+        "Apartment",
+        back_populates="url",
+        uselist=False
+    )
+
+#Blocked phone numbers or real estate agent's phone number If phone number already in db then it should be added to blocked phone numbers and will be deleted from apartments
+class AgentPhoneNumber(Base):
+    __tablename__ = "agentphonenumbers"
+
+    id: Mapped[int] = mapped_column(BIGINT, primary_key=True, autoincrement=True)
+    agent_name: Mapped[str] = mapped_column(String(100), nullable=True)
+    phone_number: Mapped[str] = mapped_column(String(50), nullable=True)
