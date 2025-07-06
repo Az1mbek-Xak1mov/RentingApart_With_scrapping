@@ -37,7 +37,7 @@ else:
 DB_URL = f"postgresql+psycopg2://{DB_USER}:{DB_PASSWORD}@{host_port}/{DB_NAME}"
 
 # Create engine
-engine = create_engine(DB_URL, echo=False)
+engine = create_engine(DB_URL, echo=True)
 
 # Session factory
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
