@@ -32,7 +32,7 @@ def scrape_olx_ad_static(url: str) -> dict:
     session = requests.Session()
     session.headers.update(random.choice(HEADERS_LIST))
     # seed cookies
-    session.get("https://www.olx.uz", timeout=5)
+    session.get(url, timeout=5)
 
     try:
         resp = session.get(url, timeout=10)
@@ -44,7 +44,6 @@ def scrape_olx_ad_static(url: str) -> dict:
     soup = BeautifulSoup(resp.text, 'html.parser')
     data: dict = {}
 
-    # --- existing scraping (Title, PriceValue, Parameters, Description, Images, Location text, SellerName) ---
     # Title
     title_tag = soup.find('h1') or soup.select_one('div[data-testid="offer_title"] h4')
     if title_tag:
