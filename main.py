@@ -1,4 +1,5 @@
 from bot.handler import *
+from db.models import Apartment,ApartmentUrl,ApartmentImage,AgentPhoneNumber
 
 
 async def main() -> None:
