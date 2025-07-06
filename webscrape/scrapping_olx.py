@@ -3,8 +3,25 @@ import re
 from urllib.parse import urljoin, urlparse, parse_qs
 import requests
 from bs4 import BeautifulSoup
-from webscrape.process_olx import HEADERS_LIST
 
+HEADERS_LIST = [
+    {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36",
+        "X-Requested-With": "XMLHttpRequest",
+    },
+    {
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0 Safari/537.36",
+        "X-Requested-With": "XMLHttpRequest",
+    },
+    {
+        "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36",
+        "X-Requested-With": "XMLHttpRequest",
+    },
+    {
+        "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 14_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0 Mobile/15E148 Safari/604.1",
+        "X-Requested-With": "XMLHttpRequest",
+    },
+]
 
 def scrape_olx_ad_static(url: str) -> dict:
     """
