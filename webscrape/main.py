@@ -1,4 +1,3 @@
-from webscrape.process_olx import process_olx_ad
 from webscrape.scrapping_urls_olx import get_all_urls_for_apart
 
 # Insert your OLX filter URL below:
