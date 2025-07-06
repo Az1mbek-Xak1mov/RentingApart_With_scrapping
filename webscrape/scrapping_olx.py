@@ -1,7 +1,10 @@
+import random
 import re
 from urllib.parse import urljoin, urlparse, parse_qs
 import requests
 from bs4 import BeautifulSoup
+from webscrape.process_olx import HEADERS_LIST
+
 
 def scrape_olx_ad_static(url: str) -> dict:
     """
@@ -9,13 +12,15 @@ def scrape_olx_ad_static(url: str) -> dict:
     'Title', 'PriceValue', 'Parameters', 'Description', 'Images', 'Location', 'SellerName',
     and now optionally: 'MapLink', 'Latitude', 'Longitude'.
     """
-    headers = {
-        "User-Agent": "Mozilla/5.0 (compatible; SimpleOLXScraper/1.0; +https://example.com/bot-info)"
-    }
+    session = requests.Session()
+    session.headers.update(random.choice(HEADERS_LIST))
+    # seed cookies
+    session.get("https://www.olx.uz", timeout=5)
+
     try:
-        resp = requests.get(url, headers=headers, timeout=10)
+        resp = session.get(url, timeout=10)
         resp.raise_for_status()
-    except requests.RequestException as e:
+    except Exception as e:
         print(f"Error fetching {url}: {e}")
         return {}
 

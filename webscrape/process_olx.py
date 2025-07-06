@@ -71,6 +71,7 @@ def fetch_olx_phone(ad_url: str) -> str | None:
 
 def process_olx_ad() -> Apartment | None:
     session_db = SessionLocal()
+    processed_count = 0
     ad_urls = session_db.query(ApartmentUrl).filter_by(status='new').all()
     for ad_url in ad_urls:
         data = scrape_olx_ad_static(ad_url.url)
@@ -82,9 +83,10 @@ def process_olx_ad() -> Apartment | None:
 
         # fetch phone
         phone = fetch_olx_phone(ad_url.url)
+
         if not phone:
             print(f"Skipping {ad_url.url}, no phone found")
-            return None
+            continue
 
         # dedupe by phone
         exists_phone = session_db.query(Apartment).filter_by(phone_number=phone).first()
@@ -156,7 +158,8 @@ def process_olx_ad() -> Apartment | None:
         # mark URL as processed
         ad_url.status = 'done'
         session_db.commit()
+        processed_count += 1
 
 
     session_db.close()
-    return None
+    return processed_count
