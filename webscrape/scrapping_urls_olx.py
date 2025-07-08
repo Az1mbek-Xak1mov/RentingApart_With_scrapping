@@ -5,13 +5,13 @@ from db.models import ApartmentUrl
 from webscrape.process_olx import process_olx_ad
 
 session = SessionLocal()
-def get_all_urls_for_apart(filter_url:str):
+def get_all_urls_for_apart():
     seen_urls = set()
     print(1)
     for page in range(1, 3):
         print(2)
         url = (
-            f"{filter_url}&page={page}"
+            f"https://www.olx.uz/nedvizhimost/kvartiry/arenda-dolgosrochnaya/?currency=UYE&search%5Bfilter_float_price:from%5D=600&search%5Bfilter_float_price:to%5D=900&search%5Bfilter_float_number_of_rooms:from%5D=2&search%5Bfilter_float_number_of_rooms:to%5D=3&search%5Bfilter_enum_furnished%5D%5B0%5D=yes&search%5Bfilter_enum_comission%5D%5B0%5D=no&page={page}"
         )
         headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
