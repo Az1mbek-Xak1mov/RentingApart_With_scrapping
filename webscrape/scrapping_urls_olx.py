@@ -16,10 +16,11 @@ def get_all_urls_for_apart():
         headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
         }
-
+        print(url)
         resp = requests.get(url, headers=headers)
+        print(resp)
         soup = BeautifulSoup(resp.text, "html.parser")
-
+        print(soup)
         for a in soup.find_all("a", class_="css-1tqlkj0"):
             print(3)
             href = a.get("href")
