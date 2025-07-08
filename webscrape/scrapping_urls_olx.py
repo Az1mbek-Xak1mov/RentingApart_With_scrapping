@@ -7,7 +7,7 @@ from webscrape.process_olx import process_olx_ad
 session = SessionLocal()
 def get_all_urls_for_apart(filter_url:str):
     seen_urls = set()
-    for page in range(1, 5):
+    for page in range(1, 3):
         url = (
             f"{filter_url}&page={page}"
         )
@@ -38,6 +38,6 @@ def get_all_urls_for_apart(filter_url:str):
             session.add(ApartmentUrl(url=full_url, status="new"))
     session.commit()
     session.close()
-    return process_olx_ad()
+    # return process_olx_ad()
 
 
