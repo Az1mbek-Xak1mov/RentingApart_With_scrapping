@@ -14,7 +14,8 @@ def get_all_urls_for_apart():
             f"https://www.olx.uz/nedvizhimost/kvartiry/arenda-dolgosrochnaya/?currency=UYE&search%5Bfilter_float_price:from%5D=600&search%5Bfilter_float_price:to%5D=900&search%5Bfilter_float_number_of_rooms:from%5D=2&search%5Bfilter_float_number_of_rooms:to%5D=3&search%5Bfilter_enum_furnished%5D%5B0%5D=yes&search%5Bfilter_enum_comission%5D%5B0%5D=no&page={page}"
         )
         headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36",
+            "X-Requested-With": "XMLHttpRequest",
         }
         print(url)
         resp = requests.get(url, headers=headers)
