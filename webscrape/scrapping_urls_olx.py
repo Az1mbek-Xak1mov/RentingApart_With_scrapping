@@ -18,7 +18,7 @@ def get_all_urls_for_apart():
             "X-Requested-With": "XMLHttpRequest",
         }
         print(url)
-        resp = requests.get(url, headers=headers)
+        resp = requests.get(url)
         print(resp)
         soup = BeautifulSoup(resp.text, "html.parser")
         print(soup)
