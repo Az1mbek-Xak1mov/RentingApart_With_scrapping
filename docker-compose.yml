@@ -1,0 +1,71 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: renting_apart_postgres
+    environment:
+      POSTGRES_DB: ${DB_NAME:-renting_apart_db}
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-renting_apart_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  bot:
+    build: .
+    container_name: renting_apart_bot
+    environment:
+      - TOKEN=${TOKEN}
+      - ADMIN_CHAT_ID=${ADMIN_CHAT_ID}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - DB_NAME=${DB_NAME:-renting_apart_db}
+      - DB_USER=${DB_USER:-postgres}
+      - DB_PASSWORD=${DB_PASSWORD:-postgres}
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - WEB_TOKEN=${WEB_TOKEN}
+      - CLICK_TOKEN=${CLICK_TOKEN}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    volumes:
+      - ./webscrape/images:/app/webscrape/images
+    networks:
+      - renting_apart_network
+
+  web:
+    build: .
+    container_name: renting_apart_web
+    environment:
+      - WEB_TOKEN=${WEB_TOKEN}
+      - DB_NAME=${DB_NAME:-renting_apart_db}
+      - DB_USER=${DB_USER:-postgres}
+      - DB_PASSWORD=${DB_PASSWORD:-postgres}
+      - DB_HOST=postgres
+      - DB_PORT=5432
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - renting_apart_network
+    command: python web/app.py
+
+volumes:
+  postgres_data:
+
+networks:
+  renting_apart_network:
+    driver: bridge

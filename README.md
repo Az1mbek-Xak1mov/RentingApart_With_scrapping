@@ -1,284 +1,205 @@
-# RentingApart Bot
+# RentingApart - Telegram Bot with Web Scraping
 
-A Telegram bot for scraping apartment listings from OLX and serving them to an admin user. This project scrapes apartment data (title, price, area, rooms, floor details, images, location, seller name) from OLX ads, stores them in a PostgreSQL database, downloads images to a local directory, and allows retrieval via Telegram.
+A Telegram bot for apartment rental management with web scraping capabilities and PostgreSQL database.
 
 ## Features
 
-* Scrape OLX apartment ads statically (title, description, price, parameters, images, location, seller name).
-* Optional phone retrieval using Selenium.
-* Parse parameters: rooms, floor, total storeys, area, furnishing, building type, repair status.
-* Store apartment records in PostgreSQL (`apartments` table).
-* Store downloaded images in a directory structure and metadata in `apartment_images` table.
-* Store location details (address components, latitude, longitude, map link) in a dedicated `locations` table.
-* Telegram bot integration: admin can request apartments by ID or phone number and receive details, images, and location pins or map links.
-* Caches Telegram `file_id` after sending images for faster subsequent sends.
+- Telegram bot for apartment management
+- Web scraping from OLX
+- PostgreSQL database for data storage
+- Docker containerization
+- Web interface for management
 
-## Requirements
+## Prerequisites
 
-* Python 3.9+
-* PostgreSQL server
-* ChromeDriver (for Selenium phone scraping, optional)
-* A Telegram bot token
+- Docker and Docker Compose installed
+- Telegram Bot Token
+- OpenAI API Key (optional, for address extraction)
 
-## Dependencies
+## Quick Start
 
-* `sqlalchemy`, `psycopg2-binary` for database ORM
-* `python-dotenv` for environment variable loading
-* `requests`, `beautifulsoup4` for HTTP scraping
-* `selenium` for dynamic phone retrieval (optional)
-* `aiogram` (or `python-telegram-bot`) for Telegram bot
-* `urllib3`, `re`, `pathlib`, etc.
+1. **Clone the repository**
+   ```bash
+   git clone <repository-url>
+   cd RentingApart
+   ```
 
-Install via:
+2. **Create environment file**
+   ```bash
+   cp .env.example .env
+   ```
+
+3. **Configure environment variables**
+   Edit `.env` file with your actual values:
+   ```env
+   TOKEN=your_telegram_bot_token_here
+   ADMIN_CHAT_ID=your_admin_chat_id_here
+   OPENAI_API_KEY=your_openai_api_key_here
+   DB_PASSWORD=your_secure_password_here
+   WEB_TOKEN=your_web_token_here
+   CLICK_TOKEN=your_click_token_here
+   ```
+
+4. **Start the services**
+   ```bash
+   docker-compose up -d
+   ```
+
+5. **Check logs**
+   ```bash
+   # View all logs
+   docker-compose logs -f
+   
+   # View specific service logs
+   docker-compose logs -f bot
+   docker-compose logs -f postgres
+   docker-compose logs -f web
+   ```
+
+## Services
+
+### PostgreSQL Database
+- **Port**: 5432
+- **Database**: renting_apart_db
+- **User**: postgres
+- **Password**: Set in `.env` file
+
+### Telegram Bot
+- Runs the main bot application
+- Connects to PostgreSQL database
+- Handles apartment management commands
+
+### Web Interface
+- **Port**: 8000
+- Web interface for apartment management
+- Accessible at `http://localhost:8000`
+
+## Environment Variables
+
+| Variable | Description | Required |
+|----------|-------------|----------|
+| `TOKEN` | Telegram Bot Token | Yes |
+| `ADMIN_CHAT_ID` | Admin Chat ID for notifications | Yes |
+| `OPENAI_API_KEY` | OpenAI API Key for address extraction | No |
+| `DB_NAME` | Database name | No (default: renting_apart_db) |
+| `DB_USER` | Database user | No (default: postgres) |
+| `DB_PASSWORD` | Database password | Yes |
+| `DB_HOST` | Database host | No (default: postgres) |
+| `DB_PORT` | Database port | No (default: 5432) |
+| `WEB_TOKEN` | Web interface token | No |
+| `CLICK_TOKEN` | Payment token | No |
+
+## Docker Commands
 
 ```bash
-pip install sqlalchemy psycopg2-binary python-dotenv requests beautifulsoup4 selenium aiogram
+# Start all services
+docker-compose up -d
+
+# Stop all services
+docker-compose down
+
+# Restart a specific service
+docker-compose restart bot
+
+# View service status
+docker-compose ps
+
+# Execute commands in running container
+docker-compose exec bot python -c "print('Hello from bot container')"
+
+# View logs
+docker-compose logs -f bot
+
+# Rebuild and start
+docker-compose up --build -d
 ```
 
-## Environment Configuration
+## Database Management
 
-Create a `.env` file in the project root with the following variables:
+```bash
+# Connect to PostgreSQL
+docker-compose exec postgres psql -U postgres -d renting_apart_db
 
-```env
-# Telegram Bot
-TOKEN=YOUR_TELEGRAM_BOT_TOKEN
-ADMIN_CHAT_ID=YOUR_TELEGRAM_CHAT_ID
+# Backup database
+docker-compose exec postgres pg_dump -U postgres renting_apart_db > backup.sql
 
-# Database (PostgreSQL)
-DB_USER=your_db_user
-DB_PASSWORD=your_db_password
-DB_HOST=localhost          # or your DB host
-DB_PORT=5432               # optional; omit or set if needed
-DB_NAME=renting_apart
-
-# Image storage directory (optional)
-APARTMENT_IMG_DIR=/full/path/to/images  # default: ./images
-
-# Selenium (optional) - if retrieving phone numbers
-# Ensure ChromeDriver is installed and in PATH
+# Restore database
+docker-compose exec -T postgres psql -U postgres renting_apart_db < backup.sql
 ```
 
-> **Note**: Do not commit `.env` to version control; add it to `.gitignore`.
+## Development
 
-## Database Setup
+For development, you can run services individually:
 
-1. Ensure PostgreSQL server is running.
-2. Create the database. In terminal:
+```bash
+# Start only database
+docker-compose up postgres -d
 
-   ```bash
-   # Replace user as needed; use superuser or a role with CREATEDB privilege
-   psql -h localhost -U postgres
-   CREATE DATABASE renting_apart TEMPLATE template0;
-   \q
-   ```
-3. (Optional) Create dedicated DB user:
+# Run bot locally (make sure database is running)
+python main.py
 
-   ```sql
-   CREATE ROLE renting_user WITH LOGIN PASSWORD 'your_password';
-   CREATE DATABASE renting_apart OWNER renting_user TEMPLATE template0;
-   ```
-4. Ensure `.env` has matching `DB_USER`, `DB_PASSWORD`, etc.
-5. The application will automatically create tables (`apartments`, `apartment_images`, `locations`) at startup via SQLAlchemy’s `Base.metadata.create_all(...)` if they do not exist.
-
-## Project Structure
-
-```
-project_root/
-├── .env
-├── main.py            # Telegram bot entrypoint
-├── webscrape/
-│   ├── main.py        # Scraper entrypoint
-│   └── process_olx.py # Scraping logic and DB insertion
-├── models/
-│   ├── apartment.py
-│   ├── apartment_image.py
-│   └── location.py    # new Location model
-├── db/
-│   └── engine.py      # SQLAlchemy engine, Base, SessionLocal
-├── olx_utils.py       # parse_parameters, save_image_for_apartment, extract location
-└── requirements.txt   # optional listing dependencies
+# Run web interface locally
+python web/app.py
 ```
 
-* **db/engine.py**: Defines `engine`, `SessionLocal`, and `Base = declarative_base()`. Loads environment via `load_dotenv()`.
-* **models/**: Contains SQLAlchemy models importing `Base` from `db.engine`. Now includes:
+## Troubleshooting
 
-  * `Apartment`: main listing data
-  * `ApartmentImage`: images metadata
-  * `Location`: address components + latitude/longitude + map link
-* **olx\_utils.py**: Helper functions for parsing OLX parameters, saving images locally, extracting location data (map link and coordinates).
-* **webscrape/process\_olx.py**: Contains `process_olx_ad(ad_url, attempt_phone=False)` which:
+### Common Issues
 
-  1. Scrapes static fields via `requests` + BeautifulSoup.
-  2. Parses parameters to fill `rooms`, `floor`, `total_storeys`, `area`, etc.
-  3. Extracts location: city/district text and Google Maps link + lat/lon.
-  4. Checks duplicates by existing `ApartmentImage.original_url`.
-  5. Inserts `Apartment` record.
-  6. Downloads images into `APARTMENT_IMG_DIR/{apartment_id}/`.
-  7. Inserts `ApartmentImage` rows.
-  8. Inserts `Location` row linked to the `Apartment`.
-* **webscrape/main.py**: Entrypoint to run scraping on a list of URLs.
-* **main.py**: Telegram bot startup (using `aiogram`), calls `Base.metadata.create_all(...)`, sets up handlers for admin commands to retrieve apartments.
+1. **Bot not responding**
+   - Check if `TOKEN` is correctly set in `.env`
+   - Verify bot token is valid
+   - Check bot logs: `docker-compose logs bot`
 
-## Models
+2. **Database connection issues**
+   - Ensure PostgreSQL is running: `docker-compose ps`
+   - Check database logs: `docker-compose logs postgres`
+   - Verify database credentials in `.env`
 
-### Apartment (models/apartment.py)
+3. **Port conflicts**
+   - Change ports in `docker-compose.yml` if 5432 or 8000 are already in use
 
-```python
-from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy import BIGINT, String, Text, Integer, DECIMAL, Boolean, TIMESTAMP, ForeignKey
-from sqlalchemy.sql import func
-from decimal import Decimal
-from db.engine import Base
+4. **Permission issues**
+   - Ensure Docker has proper permissions
+   - Check file permissions for `webscrape/images` directory
 
-class Apartment(Base):
-    __tablename__ = "apartments"
+### Logs and Debugging
 
-    id: Mapped[int] = mapped_column(BIGINT, primary_key=True, autoincrement=True)
-    owner_name: Mapped[str] = mapped_column(String(100), nullable=True)
-    title: Mapped[str] = mapped_column(String(200), nullable=False)
-    description: Mapped[str] = mapped_column(Text, nullable=False)
-    price: Mapped[int] = mapped_column(Integer, nullable=False)
-    floor: Mapped[int] = mapped_column(Integer, nullable=False)
-    total_storeys: Mapped[int] = mapped_column(Integer, nullable=False)
-    area: Mapped[Decimal] = mapped_column(DECIMAL(10, 2), nullable=False)
-    rooms: Mapped[int] = mapped_column(Integer, nullable=False)
-    is_furnished: Mapped[bool] = mapped_column(Boolean, nullable=False)
-    district: Mapped[str] = mapped_column(String(100), nullable=False)
-    phone_number: Mapped[str] = mapped_column(String(50), nullable=True)
-    building_type: Mapped[str] = mapped_column(String(50), nullable=True)
-    repair: Mapped[str] = mapped_column(String(50), nullable=True)
-    # New location fields
-    map_link: Mapped[str] = mapped_column(String(500), nullable=True)
-    latitude: Mapped[Decimal] = mapped_column(DECIMAL(9, 6), nullable=True)
-    longitude: Mapped[Decimal] = mapped_column(DECIMAL(9, 6), nullable=True)
+```bash
+# View all logs
+docker-compose logs
 
-    scraped_at: Mapped[str] = mapped_column(TIMESTAMP, server_default=func.now())
-    status: Mapped[str] = mapped_column(String(50), nullable=True)
+# Follow logs in real-time
+docker-compose logs -f
 
-    images_list = relationship(
-        "ApartmentImage",
-        back_populates="apartment",
-        cascade="all, delete-orphan",
-    )
+# View specific service logs
+docker-compose logs bot
+docker-compose logs postgres
+docker-compose logs web
 
-    def __repr__(self):
-        return (
-            f"<Apartment(id={self.id}, title={self.title!r}, price={self.price}, "
-            f"area={self.area}, rooms={self.rooms}, floor={self.floor}/{self.total_storeys})>"
-        )
+# Check container status
+docker-compose ps
+
+# Check resource usage
+docker stats
 ```
 
-### ApartmentImage (models/apartment\_image.py)
+## Security Notes
 
-```python
-from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy import BIGINT, String, TIMESTAMP, ForeignKey
-from sqlalchemy.sql import func
-from db.engine import Base
+- Never commit `.env` files to version control
+- Use strong passwords for database
+- Keep API keys secure
+- Regularly update dependencies
+- Use HTTPS in production
 
-class ApartmentImage(Base):
-    __tablename__ = "apartment_images"
+## Contributing
 
-    id: Mapped[int] = mapped_column(BIGINT, primary_key=True, autoincrement=True)
-    apartment_id: Mapped[int] = mapped_column(
-        BIGINT, ForeignKey("apartments.id", ondelete="CASCADE"), nullable=False
-    )
-    original_url: Mapped[str] = mapped_column(String(500), nullable=True)
-    local_path: Mapped[str] = mapped_column(String(500), nullable=False)
-    telegram_file_id: Mapped[str] = mapped_column(String(200), nullable=True)
-    created_at: Mapped[str] = mapped_column(TIMESTAMP, server_default=func.now())
-    apartment = relationship("Apartment", back_populates="images_list")
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Test with Docker Compose
+5. Submit a pull request
 
-    def __repr__(self):
-        return f"<ApartmentImage(id={self.id}, apartment_id={self.apartment_id}, local_path={self.local_path})>"
-```
+## License
 
-## olx\_utils.py updates
-
-* **parse\_parameters**: handles rooms, floor, total\_storeys, area, furnishing, building type, repair.
-* **save\_image\_for\_apartment**: downloads and stores images.
-* **extract location**: in `scrape_olx_ad_static`, find Google Maps link and parse `ll` parameter for latitude/longitude:
-
-```python
-# inside scrape_olx_ad_static
-# ... after other fields ...
-map_link = None
-lat = lon = None
-# Find first <a> with maps link
-a_tag = soup.find('a', href=re.compile(r'maps\.google\.com/maps\?ll='))
-if a_tag:
-    href = a_tag.get('href')
-    map_link = href if href.startswith('http') else urljoin(url, href)
-    try:
-        parsed = urlparse(map_link)
-        qs = parse_qs(parsed.query)
-        ll_vals = qs.get('ll') or qs.get('q')
-        if ll_vals:
-            parts = ll_vals[0].split(',')
-            lat, lon = float(parts[0]), float(parts[1])
-    except:
-        pass
-
-if map_link:
-    data['MapLink'] = map_link
-if lat is not None and lon is not None:
-    data['Latitude'] = lat
-    data['Longitude'] = lon
-```
-
-## process\_olx\_ad updates
-
-In `webscrape/process_olx.py`, after scraping and parsing, set the new location columns on the `Apartment` before commit:
-
-```python
-    apt = Apartment(
-        owner_name=seller_name,
-        title=title,
-        description=description,
-        price=price,
-        floor=parsed['floor'],
-        total_storeys=parsed['total_storeys'],
-        area=parsed['area'],
-        rooms=parsed['rooms'],
-        is_furnished=parsed.get('is_furnished', False),
-        district=location_text or "",
-        phone_number=phone,
-        building_type=parsed.get('building_type'),
-        repair=parsed.get('repair'),
-        status="new",
-        map_link=data.get('MapLink'),
-        latitude=data.get('Latitude'),
-        longitude=data.get('Longitude'),
-    )
-```
-
-## Telegram Bot: sending location
-
-When you fetch an `Apartment`, send a location pin if `latitude` and `longitude` exist:
-
-```python
-if apartment.latitude and apartment.longitude:
-    await bot.send_location(
-        chat_id=chat_id,
-        latitude=float(apartment.latitude),
-        longitude=float(apartment.longitude)
-    )
-elif apartment.map_link:
-    await bot.send_message(chat_id=chat_id, text=f"📍 Ссылка на карту: {apartment.map_link}")
-```
-
-## Table creation
-
-Ensure at startup you import models and call:
-
-```python
-from db.engine import Base, engine
-import models.apartment, models.apartment_image
-Base.metadata.create_all(bind=engine)
-```
-
-so the new `map_link`, `latitude`, and `longitude` columns are created.
-
----
-
-With these changes, your `Apartment` model now directly stores location data in dedicated columns, enabling the bot to send exact map pins or links in Telegram without embedding them in the description.
+[Add your license information here]

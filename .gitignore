@@ -138,12 +138,26 @@ celerybeat.pid
 
 # Environments
 .env
+.env.local
+.env.production
+.env.staging
 .venv
 env/
 venv/
 ENV/
 env.bak/
 venv.bak/
+
+# Secrets and sensitive files
+*.key
+*.pem
+secrets/
+config/secrets.json
+
+# Test files that might contain secrets
+test.py
+test_*.py
+*_test.py
 
 # Spyder project settings
 .spyderproject
