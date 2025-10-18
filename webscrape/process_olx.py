@@ -4,10 +4,12 @@ import requests
 from bs4 import BeautifulSoup
 from db.engine import SessionLocal
 from db.models import Apartment, ApartmentImage, ApartmentUrl, AgentPhoneNumber
+from environment.utils import Env
 from webscrape.olx_utils import parse_parameters, save_image_for_apartment
 from webscrape.scrapping_olx import scrape_olx_ad_static
 from typing import Optional
 from openai import OpenAI
+key = Env.key.OPENAI_API_KEY
 
 HEADERS_LIST = [
     {
@@ -81,32 +83,7 @@ def process_olx_ad() -> Apartment | None:
             session_db.commit()
             continue
 
-        # fetch phone
         phone = fetch_olx_phone(ad_url.url)
-
-        # if not phone:
-        #     print(f"Skipping {ad_url.url}, no phone found")
-        #     continue
-
-        # dedupe by phone
-        # exists_phone = session_db.query(Apartment).filter_by(phone_number=phone).first()
-        # agent_phone = session_db.query(AgentPhoneNumber).filter_by(phone_number=phone).first()
-        # if exists_phone:
-        #     print(f"Skipping {ad_url.url}, phone {phone} already in DB")
-        #     ad_url.status = 'done'
-        #     agent_record = AgentPhoneNumber(
-        #         agent_name=exists_phone.owner_name,
-        #         phone_number=exists_phone.phone_number
-        #     )
-        #     session_db.add(agent_record)
-        #     session_db.query(Apartment).filter(Apartment.phone_number == phone).delete(synchronize_session=False)
-        #     session_db.commit()
-        #     continue
-
-        # if agent_phone:
-        #     print(f"Agent phone number :{phone}")
-        #     ad_url.status = 'done'
-        #     continue
 
         parsed = parse_parameters(data.get("Parameters", {}))
         if "floor" in parsed and "total_storeys" not in parsed:
@@ -120,8 +97,7 @@ def process_olx_ad() -> Apartment | None:
             continue
 
         def extract_address_llm(description: str) -> Optional[str]:
-            # 1. Load your API key
-            api_key = "Env.key.OPENAI_API_KEY"
+            api_key = key
             if not api_key:
                 raise RuntimeError("OPENAI_API_KEY environment variable not set")
 

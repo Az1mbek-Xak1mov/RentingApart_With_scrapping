@@ -4,6 +4,8 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+class OpenApi:
+    OPENAI_API_KEY=getenv('OPENAI_API_KEY')
 
 class Bot:
     TOKEN = getenv("TOKEN")
@@ -26,3 +28,4 @@ class Env:
     db = DB()
     web = Web()
     pay = Payment()
+    key= OpenApi()
