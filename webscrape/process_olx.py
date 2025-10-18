@@ -104,7 +104,6 @@ def process_olx_ad() -> Apartment | None:
             # 2. Instantiate the client
             client = OpenAI(api_key=api_key)
 
-            # 3. Build the prompt
             system_prompt = (
                 "You are a strict address extractor for short property rental ads.\n"
                 "RULES (priority & behavior):\n"
