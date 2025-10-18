@@ -131,6 +131,7 @@ async def price_handler(message: Message, state: FSMContext):
                 f"🏬 Qavat: {apt.floor}/{apt.total_storeys}\n"
                 f"💰 Narx: ${apt.price}\n"
                 f"🔗 Manzil: {apt.map_link or '—'}\n"
+                f"🌐 URL: {apt.url.url}\n"
             )
 
             # Prepare media group

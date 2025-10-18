@@ -83,7 +83,6 @@ def scrape_olx_ad_static(url: str) -> dict:
         if inner:
             data['Description'] = inner.get_text(separator=' ', strip=True)
 
-    # Images
     images = []
     for img_container in soup.find_all('div', attrs={'data-testid': 'ad-photo'}):
         img = img_container.find('img')
@@ -100,7 +99,6 @@ def scrape_olx_ad_static(url: str) -> dict:
     if images:
         data['Images'] = images
 
-    # Location text (district/region)
     location = None
     for p in soup.find_all('p'):
         if p.get_text(strip=True) == 'Местоположение':
@@ -123,23 +121,16 @@ def scrape_olx_ad_static(url: str) -> dict:
             data['Location'] = location
 
 
-    # Seller Name
     seller_tag = soup.find(attrs={'data-testid': 'user-profile-user-name'})
     if seller_tag:
         data['SellerName'] = seller_tag.get_text(strip=True)
 
-    # --- NEW: Extract Google Maps link & coordinates ---
-    # OLX often has a link like: <a href="https://maps.google.com/maps?ll=41.27051,69.19224&...">Открыть на карте</a>
     map_link = None
     lat = lon = None
-    # Find first <a> tag whose href contains maps.google.com/maps?ll=
     a_tag = soup.find('a', href=re.compile(r'maps\.google\.com/maps\?ll='))
     if a_tag:
-        print(2)
         href = a_tag.get('href')
-        # Make absolute if needed
         map_link = href if href.startswith('http') else urljoin(url, href)
-        # Parse lat/lon from query param ll
         try:
             parsed = urlparse(map_link)
             qs = parse_qs(parsed.query)
@@ -154,10 +145,8 @@ def scrape_olx_ad_static(url: str) -> dict:
 
     if map_link:
         data['MapLink'] = map_link
-        print(3)
     if lat is not None and lon is not None:
         data['Latitude'] = lat
         data['Longitude'] = lon
-        print(4)
 
     return data

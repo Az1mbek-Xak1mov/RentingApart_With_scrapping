@@ -2,12 +2,12 @@ import random
 import re
 import requests
 from bs4 import BeautifulSoup
-from sqlalchemy.orm import Session
 from db.engine import SessionLocal
 from db.models import Apartment, ApartmentImage, ApartmentUrl, AgentPhoneNumber
 from webscrape.olx_utils import parse_parameters, save_image_for_apartment
 from webscrape.scrapping_olx import scrape_olx_ad_static
-
+from typing import Optional
+from openai import OpenAI
 
 HEADERS_LIST = [
     {
@@ -84,31 +84,30 @@ def process_olx_ad() -> Apartment | None:
         # fetch phone
         phone = fetch_olx_phone(ad_url.url)
 
-        if not phone:
-            print(f"Skipping {ad_url.url}, no phone found")
-            continue
+        # if not phone:
+        #     print(f"Skipping {ad_url.url}, no phone found")
+        #     continue
 
         # dedupe by phone
-        exists_phone = session_db.query(Apartment).filter_by(phone_number=phone).first()
-        agent_phone = session_db.query(AgentPhoneNumber).filter_by(phone_number=phone).first()
-        if exists_phone:
-            print(f"Skipping {ad_url.url}, phone {phone} already in DB")
-            ad_url.status = 'done'
-            agent_record = AgentPhoneNumber(
-                agent_name=exists_phone.owner_name,
-                phone_number=exists_phone.phone_number
-            )
-            session_db.add(agent_record)
-            session_db.query(Apartment).filter(Apartment.phone_number == phone).delete(synchronize_session=False)
-            session_db.commit()
-            continue
+        # exists_phone = session_db.query(Apartment).filter_by(phone_number=phone).first()
+        # agent_phone = session_db.query(AgentPhoneNumber).filter_by(phone_number=phone).first()
+        # if exists_phone:
+        #     print(f"Skipping {ad_url.url}, phone {phone} already in DB")
+        #     ad_url.status = 'done'
+        #     agent_record = AgentPhoneNumber(
+        #         agent_name=exists_phone.owner_name,
+        #         phone_number=exists_phone.phone_number
+        #     )
+        #     session_db.add(agent_record)
+        #     session_db.query(Apartment).filter(Apartment.phone_number == phone).delete(synchronize_session=False)
+        #     session_db.commit()
+        #     continue
 
-        if agent_phone:
-            print(f"Agent phone number :{phone}")
-            ad_url.status = 'done'
-            continue
+        # if agent_phone:
+        #     print(f"Agent phone number :{phone}")
+        #     ad_url.status = 'done'
+        #     continue
 
-        # parse parameters
         parsed = parse_parameters(data.get("Parameters", {}))
         if "floor" in parsed and "total_storeys" not in parsed:
             parsed["total_storeys"] = parsed["floor"]
@@ -120,7 +119,80 @@ def process_olx_ad() -> Apartment | None:
             session_db.commit()
             continue
 
-        # create apartment record
+        def extract_address_llm(description: str) -> Optional[str]:
+            # 1. Load your API key
+            api_key = "Env.key.OPENAI_API_KEY"
+            if not api_key:
+                raise RuntimeError("OPENAI_API_KEY environment variable not set")
+
+            # 2. Instantiate the client
+            client = OpenAI(api_key=api_key)
+
+            # 3. Build the prompt
+            system_prompt = (
+                "You are a strict address extractor for short property rental ads.\n"
+                "RULES (priority & behavior):\n"
+                "1) Extract ONLY the single best address/location from the ad and NOTHING else.\n"
+                "2) Prefer more specific actionable locations in this order (highest -> lowest):\n"
+                "   a) street + number (e.g., 'ул. Лермонтова 5')\n"
+                "   b) landmark with qualifier or direction/distance (e.g., '3 остановки от м. Дустлик', 'за Сезам', 'рядом с больница Жуковский')\n"
+                "   c) metro name (e.g., 'м. Дустлик', 'Метро: Янгиҳаёт')\n"
+                "   d) массив/массив + number (e.g., 'Чилонзор 18 массив')\n"
+                "   e) район/туман only as a last resort.\n"
+                "3) IMPORTANT: If the ad contains a district/район/туман/масcив **only** and no more specific location (no street, no landmark, no metro/distance), RETURN the string 'null' (lowercase) — do NOT return the generic district as the address.\n"
+                "4) If both a generic region and a more specific cue exist, return the MORE SPECIFIC cue (e.g., if text has 'Яшнабадский район' and '3 остановки от м. Дустлик', return '3 остановки от м. Дустлик').\n"
+                "5) Normalize to Russian/Cyrillic — transliterate Latin-script Uzbek/English to Russian phonetics when needed (e.g., 'Yangihayot' -> 'Янгиҳаёт', 'sezam' -> 'Сезам').\n"
+                "6) Capitalize appropriately (e.g., 'Больница Жуковский', 'Метрo: Янгиҳаёт').\n"
+                "7) Output EXACTLY one string — the address text alone (no JSON, no quotes, no punctuation wrappers). If no appropriate address is found, output the literal string: null\n"
+                "8) Do NOT output any explanation, extra text, or other fields — only a single line containing the address or 'null'.\n"
+                "\n"
+                "EXAMPLES (input -> output):\n"
+                "Input:\n"
+                "Xamma waroilari bn yangi remontdan ciqqan ... yunusobod 4kv da kvartira  sezam orqasida joylawgan\n"
+                "Output:\n"
+                "Сезам, сзади\n"
+                "\n"
+                "Input:\n"
+                "Chilonzor 18 mavzeda Arendaga kvartira qizlarga. 2 ta qiz kerak ...\n"
+                "Output:\n"
+                "Чилонзор 18 массив\n"
+                "\n"
+                "Input:\n"
+                "Предлагается ... в центре на Ц - 6, ориентир Юнус-Абадская налоговая. ...\n"
+                "Output:\n"
+                "Юнус-Абадская налоговая\n"
+                "\n"
+                "Input:\n"
+                "Предложение только для иностранных граждан. ... в Яшнабадском районе, 3 остановки от м. Дустлик. ...\n"
+                "Output:\n"
+                "3 остановки от м. Дустлик\n"
+                "\n"
+                "Input:\n"
+                "Уютная квартира, рядом школа и парк. Без точного адреса, подробности в Telegram.\n"
+                "Output:\n"
+                "null\n"
+            )
+
+            user_prompt = (
+                "Extract the single best address/location from the following advertisement.\n\n"
+                f"---\n{description.strip()}\n---\n\n"
+                "Return EXACTLY one string."
+            )
+
+            resp = client.chat.completions.create(
+                model="gpt-4o",
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content":user_prompt}
+                ],
+                temperature=0.0,
+                max_tokens=20,
+            )
+
+            text = resp.choices[0].message.content.strip().strip('"')
+            return None if text.lower() in ("null", "none") else text
+        address=extract_address_llm(data.get("Description"))
+        print(address)
         apt = Apartment(
             owner_name=data.get("SellerName"),
             title=data.get("Title"),
@@ -135,7 +207,7 @@ def process_olx_ad() -> Apartment | None:
             phone_number=phone,
             building_type=parsed.get("building_type"),
             repair=parsed.get("repair"),
-            map_link=data.get("MapLink"),
+            map_link=address,
             latitude=data.get("Latitude"),
             longitude=data.get("Longitude"),
             status="active",

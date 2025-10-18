@@ -43,6 +43,7 @@ async def phone_request_handler(message: Message, state: FSMContext) -> None:
                 f"🏬 Qavat: {apt.floor}/{apt.total_storeys}\n"
                 f"💰 Narx: ${apt.price}\n"
                 f"🔗 Manzil: {apt.map_link or '—'}\n"
+                f"🌐 URL: {apt.url.url}\n"
             )
 
             # Prepare media group
@@ -77,7 +78,7 @@ async def phone_request_handler(message: Message, state: FSMContext) -> None:
                 await message.answer_media_group(media)
             else:
                 await message.answer(text, parse_mode="HTML")
-            time.sleep(1)
+            time.sleep(0.5)
 
     except Exception as e:
         print("phone_request_handler error:", e)

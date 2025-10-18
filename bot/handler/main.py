@@ -14,8 +14,8 @@ from aiogram.filters import CommandStart
 
 @dp.message(F.text=="/start")
 async def command_start_handler(message: Message, state: FSMContext) -> None:
-    btns = ["Getting All Apartment", "Getting Apartment"]
-    sizes = [2]
+    btns = ["Getting All Apartment", "Getting Apartment","Sending Link"]
+    sizes = [2,1]
     markup = make_reply_btn(btns, sizes)
     await state.set_state(StepByStepStates.start)
     await message.answer("Hush kelibsiz!", reply_markup=ReplyKeyboardRemove())
