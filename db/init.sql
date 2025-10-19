@@ -1,11 +1,11 @@
 -- Database initialization script for RentingApart
--- This script will be executed when the PostgreSQL container starts for the first time
+-- This script will be run when the PostgreSQL container starts for the first time
 
--- Create database if it doesn't exist (this is handled by POSTGRES_DB environment variable)
--- But we can create additional schemas or extensions here if needed
+-- Create database if it doesn't exist (this is handled by POSTGRES_DB env var)
+-- But we can create additional databases or schemas here if needed
 
--- Enable UUID extension
+-- Create extensions if needed
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
--- You can add any additional database setup here
--- For example, creating additional schemas, setting up permissions, etc.
+-- The actual table creation will be handled by SQLAlchemy models
+-- This file is here for any additional database setup that might be needed

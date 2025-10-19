@@ -56,6 +56,97 @@ A Telegram bot for apartment rental management with web scraping capabilities an
    docker-compose logs -f web
    ```
 
+6. **Stop services**
+   ```bash
+   docker-compose down
+   ```
+
+7. **Restart services**
+   ```bash
+   docker-compose restart
+   ```
+
+## Docker Services
+
+The Docker Compose setup includes three services:
+
+- **postgres**: PostgreSQL database (port 5432)
+- **bot**: Telegram bot service
+- **web**: Web interface (port 5000)
+
+## Environment Variables
+
+| Variable | Description | Required |
+|----------|-------------|----------|
+| `TOKEN` | Telegram Bot Token | Yes |
+| `OPENAI_API_KEY` | OpenAI API Key for address extraction | No |
+| `DB_PASSWORD` | Database password | Yes |
+| `WEB_TOKEN` | Web interface token | No |
+| `CLICK_TOKEN` | Payment token | No |
+
+## Troubleshooting
+
+### Common Issues
+
+1. **Bot not responding**
+   - Check if `TOKEN` is correctly set in `.env`
+   - Verify bot token is valid
+   - Check bot logs: `docker-compose logs bot`
+
+2. **Database connection issues**
+   - Ensure PostgreSQL container is running: `docker-compose ps`
+   - Check database logs: `docker-compose logs postgres`
+   - Verify database credentials in `.env`
+
+3. **Web interface not accessible**
+   - Check if port 5000 is available
+   - Verify web service logs: `docker-compose logs web`
+
+### Reset Database
+
+To completely reset the database:
+
+```bash
+docker-compose down -v
+docker-compose up -d
+```
+
+This will remove all data and recreate the database.
+
+## Development
+
+### Running in Development Mode
+
+For development, you can run services individually:
+
+```bash
+# Start only database
+docker-compose up -d postgres
+
+# Run bot locally
+python main.py
+
+# Run web interface locally
+python web/app.py
+```
+
+### Building Custom Images
+
+```bash
+# Build bot image
+docker-compose build bot
+
+# Build all images
+docker-compose build
+```
+
+## Security Notes
+
+- Never commit `.env` files to version control
+- Use strong passwords for database
+- Regularly update dependencies
+- Monitor logs for any suspicious activity
+
 ## Services
 
 ### PostgreSQL Database

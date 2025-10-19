@@ -159,6 +159,14 @@ test.py
 test_*.py
 *_test.py
 
+# Additional sensitive files
+*.env
+.env.*
+!.env.example
+config.ini
+secrets.json
+credentials.json
+
 # Spyder project settings
 .spyderproject
 .spyproject
